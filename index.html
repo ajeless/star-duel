@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Star Duel</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="masthead">
+        <div class="masthead__copy">
+          <p class="eyebrow">Retro Tactical Sandbox</p>
+          <h1>Star Duel</h1>
+          <p class="subtitle">
+            Hot-seat, turn-based ship combat inspired by Sega&apos;s Star Trek SOS.
+          </p>
+        </div>
+        <section class="console-block controls-panel" aria-label="Control reference">
+          <span class="controls-panel__label">Command Keys</span>
+          <ul class="control-list control-list--pill">
+            <li><strong>M</strong><span>Move Action</span></li>
+            <li><strong>&larr; / &rarr;</strong><span>Rotate</span></li>
+            <li><strong>&uarr;</strong><span>Thrust Forward</span></li>
+            <li><strong>&darr;</strong><span>End Movement</span></li>
+            <li><strong>S</strong><span>Shields</span></li>
+            <li><strong>F</strong><span>Fire Torpedo</span></li>
+            <li><strong>E</strong><span>End Turn</span></li>
+            <li><strong>R</strong><span>Reset Battle</span></li>
+          </ul>
+        </section>
+      </header>
+
+      <section class="turn-banner" id="turn-banner" aria-live="polite">
+        <span class="turn-banner__label" id="turn-banner-label">Turn Control</span>
+        <strong class="turn-banner__player" id="turn-banner-player">Player 1 At Helm</strong>
+        <span class="turn-banner__detail" id="turn-banner-detail">2 actions remaining. Pass controls when the turn ends.</span>
+        <div class="turn-banner__meta">
+          <span class="turn-banner__chip" id="turn-banner-round">Round 1</span>
+          <span class="turn-banner__chip" id="turn-banner-actions">2 actions remaining</span>
+        </div>
+      </section>
+
+      <main class="battle-layout">
+        <aside class="hud hud-left" id="hud-player-1">
+          <div class="hud__title">Player 1</div>
+          <div class="hud__callsign">USS Vector</div>
+          <div class="hud__stat">
+            <span>Hull</span>
+            <strong id="player-1-hull">100</strong>
+          </div>
+          <div class="meter">
+            <div class="meter__fill meter__fill--hull" id="player-1-hull-meter"></div>
+          </div>
+          <div class="hud__stat">
+            <span>Shield Pool</span>
+            <strong id="player-1-shield">100</strong>
+          </div>
+          <div class="meter">
+            <div class="meter__fill meter__fill--shield" id="player-1-shield-meter"></div>
+          </div>
+          <div class="hud__stat">
+            <span>Shield State</span>
+            <strong id="player-1-shield-state">DOWN</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Torpedoes</span>
+            <strong id="player-1-torpedoes">10</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Actions Ready</span>
+            <strong id="player-1-actions">2</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Range To Target</span>
+            <strong id="player-1-range">0</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Hit Chance</span>
+            <strong id="player-1-hit-chance">0%</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Coordinates</span>
+            <strong id="player-1-position">00 / 00</strong>
+          </div>
+        </aside>
+
+        <section class="arena-panel">
+          <div class="arena-frame">
+            <canvas id="battlefield" aria-label="Star Duel battlefield"></canvas>
+            <div class="arena-overlay">
+              <span class="arena-overlay__label">Command Uplink</span>
+              <strong id="mode-label">Awaiting Orders</strong>
+              <span id="status-text">Lower shields before firing torpedoes.</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="hud hud-right" id="hud-player-2">
+          <div class="hud__title">Player 2</div>
+          <div class="hud__callsign">IKS Specter</div>
+          <div class="hud__stat">
+            <span>Hull</span>
+            <strong id="player-2-hull">100</strong>
+          </div>
+          <div class="meter">
+            <div class="meter__fill meter__fill--hull" id="player-2-hull-meter"></div>
+          </div>
+          <div class="hud__stat">
+            <span>Shield Pool</span>
+            <strong id="player-2-shield">100</strong>
+          </div>
+          <div class="meter">
+            <div class="meter__fill meter__fill--shield" id="player-2-shield-meter"></div>
+          </div>
+          <div class="hud__stat">
+            <span>Shield State</span>
+            <strong id="player-2-shield-state">DOWN</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Torpedoes</span>
+            <strong id="player-2-torpedoes">10</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Actions Ready</span>
+            <strong id="player-2-actions">0</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Range To Target</span>
+            <strong id="player-2-range">0</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Hit Chance</span>
+            <strong id="player-2-hit-chance">0%</strong>
+          </div>
+          <div class="hud__stat">
+            <span>Coordinates</span>
+            <strong id="player-2-position">00 / 00</strong>
+          </div>
+        </aside>
+      </main>
+
+      <section class="console-grid">
+        <div class="console-block console-block--log">
+          <div class="console-block__heading">
+            <h2>Combat Log</h2>
+            <button id="reset-button" class="reset-button" type="button">Reset Battle</button>
+          </div>
+          <ol id="log-list" class="log-list" aria-live="polite"></ol>
+        </div>
+      </section>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>
