@@ -3,22 +3,20 @@ import startAlertUrl from "../../assets/sounds/start_red_alert.mp3";
 import explosionUrl from "../../assets/sounds/explosion.mp3";
 import codeRedUrl from "../../assets/sounds/code_red_31.mp3";
 import torpedoAwayUrl from "../../assets/sounds/torpedo_away.mp3";
-
-const BOARD_COLS = 33;
-const BOARD_ROWS = 33;
-const MAX_ACTIONS = 2;
-const MOVE_RANGE = 3;
-const START_HULL = 100;
-const START_SHIELD = 100;
-const START_TORPEDOES = 10;
-const TORPEDO_DAMAGE = 35;
-const DAMAGE_POWERUP_MULTIPLIER = 1.5;
-const LOG_LIMIT = 10;
-const CODE_RED_HULL_THRESHOLD = 31;
-const TORPEDO_FLIGHT_MS = 520;
-const TORPEDO_IMPACT_MS = 300;
-const ASTEROID_COUNT = 20;
-const POWERUP_COUNT = 5;
+import {
+  BOARD_COLS,
+  BOARD_ROWS,
+  StarDuelEngine,
+} from "./star-duel-engine.js";
+import {
+  COMMAND_TYPES,
+  createCommand,
+} from "./star-duel-protocol.js";
+import { StarDuelOnlineClient } from "../network/star-duel-online-client.js";
+import {
+  startCloudflareQuickTunnel,
+  stopCloudflareQuickTunnel,
+} from "../network/local-hosting-client.js";
 
 const SOUND_KEYS = {
   startAlert: "start-alert",
@@ -34,38 +32,6 @@ const SOUND_VOLUMES = {
   [SOUND_KEYS.torpedoAway]: 0.45,
 };
 
-const PLAYER_CONFIG = [
-  {
-    label: "Player 1",
-    shipName: "USS Vector",
-    color: "#5ff6ff",
-    accentAlpha: 0.18,
-    position: { col: 11, row: 16 },
-    facing: "e",
-    shipClass: "cruiser",
-  },
-  {
-    label: "Player 2",
-    shipName: "IKS Specter",
-    color: "#ff7b7b",
-    accentAlpha: 0.2,
-    position: { col: 21, row: 16 },
-    facing: "w",
-    shipClass: "bird",
-  },
-];
-
-const DIRECTION_LABELS = {
-  nw: "northwest",
-  ne: "northeast",
-  w: "west",
-  e: "east",
-  sw: "southwest",
-  se: "southeast",
-};
-
-const FACING_ORDER = ["nw", "ne", "e", "se", "sw", "w"];
-
 const DIRECTION_ROTATIONS = {
   nw: -Math.PI / 6,
   ne: Math.PI / 6,
@@ -73,90 +39,6 @@ const DIRECTION_ROTATIONS = {
   w: -Math.PI / 2,
   sw: (-5 * Math.PI) / 6,
   se: (5 * Math.PI) / 6,
-};
-
-const ASTEROID_COORDINATE_POOL = [
-  { col: 4, row: 6 },
-  { col: 8, row: 4 },
-  { col: 13, row: 5 },
-  { col: 18, row: 6 },
-  { col: 22, row: 4 },
-  { col: 27, row: 7 },
-  { col: 29, row: 5 },
-  { col: 6, row: 10 },
-  { col: 11, row: 8 },
-  { col: 16, row: 9 },
-  { col: 21, row: 11 },
-  { col: 25, row: 9 },
-  { col: 28, row: 12 },
-  { col: 5, row: 15 },
-  { col: 9, row: 13 },
-  { col: 14, row: 12 },
-  { col: 18, row: 14 },
-  { col: 23, row: 13 },
-  { col: 26, row: 16 },
-  { col: 7, row: 18 },
-  { col: 12, row: 20 },
-  { col: 17, row: 17 },
-  { col: 22, row: 19 },
-  { col: 28, row: 21 },
-  { col: 4, row: 23 },
-  { col: 9, row: 25 },
-  { col: 14, row: 24 },
-  { col: 18, row: 22 },
-  { col: 24, row: 25 },
-  { col: 27, row: 23 },
-  { col: 6, row: 28 },
-  { col: 11, row: 29 },
-  { col: 16, row: 27 },
-  { col: 21, row: 28 },
-  { col: 25, row: 30 },
-  { col: 29, row: 27 },
-];
-
-const POWERUP_COORDINATE_POOL = [
-  { col: 6, row: 7 },
-  { col: 12, row: 6 },
-  { col: 20, row: 8 },
-  { col: 26, row: 10 },
-  { col: 8, row: 16 },
-  { col: 15, row: 14 },
-  { col: 24, row: 17 },
-  { col: 5, row: 22 },
-  { col: 17, row: 21 },
-  { col: 27, row: 24 },
-  { col: 10, row: 27 },
-  { col: 19, row: 26 },
-  { col: 23, row: 29 },
-];
-
-const SMOKE_SCENARIO = {
-  startingIndex: 0,
-  asteroids: [
-    { col: 14, row: 16 },
-    { col: 18, row: 16 },
-    { col: 12, row: 13 },
-    { col: 15, row: 12 },
-    { col: 19, row: 12 },
-    { col: 16, row: 15 },
-    { col: 17, row: 14 },
-    { col: 20, row: 18 },
-    { col: 17, row: 19 },
-    { col: 13, row: 20 },
-    { col: 10, row: 18 },
-    { col: 22, row: 14 },
-    { col: 24, row: 17 },
-    { col: 21, row: 21 },
-    { col: 8, row: 11 },
-    { col: 11, row: 24 },
-  ],
-  powerups: [
-    { col: 13, row: 16 },
-    { col: 19, row: 16 },
-    { col: 16, row: 12 },
-    { col: 16, row: 20 },
-    { col: 23, row: 19 },
-  ],
 };
 
 const BATTLE_COLORS = {
@@ -221,14 +103,19 @@ export class StarDuelApp {
   constructor(ui) {
     this.ui = ui;
     this.scene = null;
-    this.scenario = this.readScenario();
+    this.engine = new StarDuelEngine({ scenarioName: this.readScenarioName() });
+    this.state = this.engine.getState();
+    this.sessionMode = "local";
+    this.screen = "mode-select";
+    this.onlineClient = null;
+    this.onlineUnsubscribers = [];
+    this.onlineState = this.createOnlineState();
     this.codeRedAudio = null;
     this.pendingOpeningAlert = false;
     this.boundKeydown = this.handleKeydown.bind(this);
     this.boundResize = this.handleResize.bind(this);
     this.boundPointer = this.flushPendingOpeningAlert.bind(this);
     this.stars = this.createStarfield();
-    this.state = this.createInitialState();
 
     this.game = new Phaser.Game({
       type: Phaser.CANVAS,
@@ -245,6 +132,9 @@ export class StarDuelApp {
     window.addEventListener("keydown", this.boundKeydown, { passive: false });
     window.addEventListener("resize", this.boundResize);
     window.addEventListener("pointerdown", this.boundPointer);
+
+    this.initializeLaunchpad();
+    this.updateViewUi();
   }
 
   attachScene(scene) {
@@ -253,131 +143,645 @@ export class StarDuelApp {
     this.resetGame();
   }
 
-  createInitialState() {
-    const startingIndex = this.scenario?.startingIndex ?? Math.floor(Math.random() * PLAYER_CONFIG.length);
-    const players = PLAYER_CONFIG.map((config, index) =>
-      this.createShip(config, startingIndex, index)
-    );
-    const { asteroids, powerups } = this.createBoardFeatures(players);
-
-    return {
-      players,
-      asteroids,
-      powerups,
-      activeIndex: startingIndex,
-      startingIndex,
-      round: 1,
-      phase: "command",
-      moveContext: null,
-      animation: null,
-      turnCue: {
-        playerIndex: startingIndex,
-        label: "Battle Start",
-        detail: `${players[startingIndex].label} has initiative. Shields are already down.`,
-        timeLeft: 1800,
-      },
-      gameOver: false,
-      winnerIndex: null,
-      status: `${players[startingIndex].label} has the opening turn.`,
-      log: [
-        "Asteroid debris and crystal powerups drift across the battlefield.",
-        `${players[startingIndex].label} wins initiative. Both ships begin with shields lowered.`,
-        "Ships begin facing each other across the board.",
-      ],
-    };
-  }
-
-  createShip(config, activeIndex, index) {
-    return {
-      id: index,
-      label: config.label,
-      shipName: config.shipName,
-      color: config.color,
-      accentAlpha: config.accentAlpha,
-      col: config.position.col,
-      row: config.position.row,
-      facing: config.facing,
-      shipClass: config.shipClass,
-      hull: START_HULL,
-      shield: START_SHIELD,
-      shieldsUp: false,
-      codeRedTriggered: false,
-      torpedoes: START_TORPEDOES,
-      boostCharges: 0,
-      actionsLeft: activeIndex === index ? MAX_ACTIONS : 0,
-    };
-  }
-
-  createBoardFeatures(players) {
-    const occupied = new Set(players.map((player) => this.tileKey(player.col, player.row)));
-
-    if (this.scenario) {
-      const asteroids = this.cloneScenarioTiles(this.scenario.asteroids, occupied);
-      const powerups = this.cloneScenarioTiles(this.scenario.powerups, occupied);
-      return { asteroids, powerups };
-    }
-
-    const asteroids = this.pickBoardTiles(ASTEROID_COORDINATE_POOL, ASTEROID_COUNT, occupied);
-    const powerups = this.pickBoardTiles(POWERUP_COORDINATE_POOL, POWERUP_COUNT, occupied);
-    return { asteroids, powerups };
-  }
-
-  cloneScenarioTiles(pool, occupied) {
-    const selected = [];
-
-    for (const tile of pool) {
-      const key = this.tileKey(tile.col, tile.row);
-
-      if (occupied.has(key)) {
-        continue;
-      }
-
-      occupied.add(key);
-      selected.push({ ...tile });
-    }
-
-    return selected;
-  }
-
-  pickBoardTiles(pool, count, occupied) {
-    const shuffled = Phaser.Utils.Array.Shuffle(pool.map((tile) => ({ ...tile })));
-    return this.cloneScenarioTiles(shuffled.slice(0, count), occupied);
-  }
-
-  readScenario() {
+  readScenarioName() {
     if (typeof window === "undefined") {
       return null;
     }
 
     const params = new URLSearchParams(window.location.search);
-    return params.get("scenario") === "smoke" ? SMOKE_SCENARIO : null;
+    return params.get("scenario");
+  }
+
+  defaultServerUrl() {
+    if (typeof window === "undefined") {
+      return "http://127.0.0.1:2567";
+    }
+
+    return `${window.location.protocol}//${window.location.hostname}:2567`;
+  }
+
+  defaultPublicAppUrl() {
+    if (typeof window === "undefined") {
+      return "http://127.0.0.1:4173";
+    }
+
+    return window.location.origin;
+  }
+
+  createOnlineState(patch = {}) {
+    return {
+      connecting: false,
+      connected: false,
+      roomId: "",
+      seatIndex: null,
+      role: null,
+      players: [],
+      status: "Local hot-seat battle live. Use Change Mode to pick a different command path.",
+      serverUrl: this.defaultServerUrl(),
+      publicAppUrl: this.defaultPublicAppUrl(),
+      publicServerUrl: this.defaultServerUrl(),
+      inviteLink: "",
+      hostingProvider: null,
+      hostedByThisClient: false,
+      ...patch,
+    };
+  }
+
+  initializeLaunchpad() {
+    this.ui.hostServerUrlInput.value = this.onlineState.serverUrl;
+    this.ui.joinServerUrlInput.value = this.onlineState.serverUrl;
+
+    const invite = this.readInviteParams();
+    if (invite.roomId || invite.serverUrl) {
+      this.ui.joinInviteInput.value = invite.inviteLink;
+      this.ui.joinRoomIdInput.value = invite.roomId;
+      this.ui.joinServerUrlInput.value = invite.serverUrl || this.defaultServerUrl();
+      this.screen = "join-setup";
+      this.onlineState.status = invite.roomId
+        ? `Invite detected for room ${invite.roomId}. Join when ready.`
+        : "Invite detected. Verify the room details, then join when ready.";
+    }
+  }
+
+  readInviteParams() {
+    if (typeof window === "undefined") {
+      return { roomId: "", serverUrl: "", inviteLink: "" };
+    }
+
+    const currentUrl = new URL(window.location.href);
+    const roomId = currentUrl.searchParams.get("room")?.trim() || "";
+    const serverUrl = currentUrl.searchParams.get("server")?.trim() || "";
+
+    return {
+      roomId,
+      serverUrl,
+      inviteLink: roomId || serverUrl ? currentUrl.toString() : "",
+    };
+  }
+
+  isOnlineMode() {
+    return this.sessionMode === "online";
+  }
+
+  isOnlineConnected() {
+    return this.isOnlineMode() && this.onlineState.connected && this.onlineClient;
+  }
+
+  getPerspectivePlayerIndex() {
+    return this.isOnlineConnected() && Number.isInteger(this.onlineState.seatIndex)
+      ? this.onlineState.seatIndex
+      : null;
+  }
+
+  getBoardPerspectiveOffset() {
+    return this.getPerspectivePlayerIndex() === 1 ? Math.PI : 0;
+  }
+
+  projectCoordinate(col, row) {
+    if (this.getPerspectivePlayerIndex() !== 1) {
+      return { col, row };
+    }
+
+    return {
+      col: BOARD_COLS - 1 - col,
+      row: BOARD_ROWS - 1 - row,
+    };
+  }
+
+  isBattleView() {
+    return this.screen === "battle";
+  }
+
+  getConnectedPlayerCount() {
+    return this.onlineState.players.filter((player) => player.connected).length;
+  }
+
+  getSeatLabel(fallback = "Seat: pending") {
+    if (!Number.isInteger(this.onlineState.seatIndex)) {
+      return fallback;
+    }
+
+    return this.onlineState.seatIndex === 0 ? "Seat: Player 1" : "Seat: Player 2";
+  }
+
+  updateNetworkState(patch) {
+    this.onlineState = {
+      ...this.onlineState,
+      ...patch,
+    };
+    this.syncOnlineScreenState();
+    this.updateViewUi();
+  }
+
+  updateViewUi() {
+    const isOnline = this.isOnlineMode();
+    const connectedCount = this.getConnectedPlayerCount();
+    const isBattleView = this.isBattleView();
+
+    this.ui.launchpad.hidden = isBattleView;
+    this.ui.battleShell.hidden = !isBattleView;
+
+    this.ui.modeSelectScreen.hidden = this.screen !== "mode-select";
+    this.ui.hostSetupScreen.hidden = this.screen !== "host-setup";
+    this.ui.joinSetupScreen.hidden = this.screen !== "join-setup";
+
+    this.ui.sessionModeChip.textContent = isOnline ? "Online Session" : "Local Hot-Seat";
+    this.ui.networkRoomChip.textContent = isOnline && this.onlineState.roomId
+      ? `Room: ${this.onlineState.roomId}`
+      : "Room: local";
+    this.ui.networkSeatChip.textContent = isOnline
+      ? this.getSeatLabel("Seat: pending")
+      : "Seat: shared bridge";
+    this.ui.networkPresenceChip.textContent = isOnline
+      ? `Crew: ${connectedCount}/2 connected`
+      : "Crew: 2 local captains";
+    this.ui.networkStatusText.textContent = isOnline
+      ? this.onlineState.status
+      : "Local hot-seat battle live. Use Change Mode to pick a different command path.";
+
+    this.ui.hostStatusText.textContent = this.screen === "host-setup"
+      ? this.onlineState.status
+      : "Hosting will generate and copy a temporary Cloudflare invite link.";
+    this.ui.joinStatusText.textContent = this.screen === "join-setup"
+      ? this.onlineState.status
+      : "Paste a valid invite link to join the duel.";
+
+    this.ui.copyInviteButton.hidden = !isOnline || !this.onlineState.inviteLink;
+    this.ui.copyInviteButton.disabled = !this.onlineState.inviteLink;
+
+    this.ui.shell.classList.remove("app-shell--online-seat-0", "app-shell--online-seat-1");
+
+    if (this.getPerspectivePlayerIndex() === 0) {
+      this.ui.shell.classList.add("app-shell--online-seat-0");
+    } else if (this.getPerspectivePlayerIndex() === 1) {
+      this.ui.shell.classList.add("app-shell--online-seat-1");
+    }
+
+    if (isBattleView) {
+      this.handleResize();
+    }
+  }
+
+  syncOnlineScreenState() {
+    if (!this.isOnlineMode()) {
+      return;
+    }
+
+    if (this.onlineState.connected && this.screen !== "battle") {
+      this.screen = "battle";
+    }
+  }
+
+  seedFieldValue(input, value) {
+    if (!input.value.trim()) {
+      input.value = value;
+    }
+  }
+
+  async showModeSelect() {
+    await this.disconnectOnlineSession();
+    this.sessionMode = "local";
+    this.screen = "mode-select";
+    this.onlineState = this.createOnlineState({
+      status: "Choose a command path before bringing the battle UI online.",
+    });
+    this.updateViewUi();
+  }
+
+  async startLocalBattle() {
+    await this.disconnectOnlineSession();
+    this.sessionMode = "local";
+    this.screen = "battle";
+    this.onlineState = this.createOnlineState();
+    this.updateViewUi();
+    this.resetGame();
+  }
+
+  showHostSetup() {
+    this.screen = "host-setup";
+    this.seedFieldValue(this.ui.hostServerUrlInput, this.defaultServerUrl());
+    this.onlineState = this.createOnlineState({
+      status: "Host Match will request temporary Cloudflare Quick Tunnel links from the local server.",
+    });
+    this.updateViewUi();
+  }
+
+  showJoinSetup() {
+    this.screen = "join-setup";
+    this.seedFieldValue(this.ui.joinServerUrlInput, this.defaultServerUrl());
+    this.onlineState = this.createOnlineState({
+      status: "Paste the invite link your host shared with you.",
+    });
+    this.updateViewUi();
+  }
+
+  validateUrlInput(rawValue, label) {
+    const value = rawValue.trim();
+
+    try {
+      return new URL(value).toString();
+    } catch {
+      throw new Error(`${label} must be a full URL, including protocol and port.`);
+    }
+  }
+
+  getHostSetupValues() {
+    return {
+      localServerUrl: this.validateUrlInput(
+        this.ui.hostServerUrlInput.value || this.defaultServerUrl(),
+        "Local Server URL"
+      ),
+      clientTargetUrl: this.defaultPublicAppUrl(),
+    };
+  }
+
+  getJoinSetupValues() {
+    const inviteLink = this.ui.joinInviteInput.value.trim();
+    let roomId = this.ui.joinRoomIdInput.value.trim();
+    let serverUrl = this.ui.joinServerUrlInput.value.trim() || this.defaultServerUrl();
+
+    if (inviteLink) {
+      try {
+        const inviteUrl = new URL(inviteLink);
+        roomId = inviteUrl.searchParams.get("room")?.trim() || roomId;
+        serverUrl = inviteUrl.searchParams.get("server")?.trim() || serverUrl;
+      } catch {
+        if (!roomId && !inviteLink.includes("://") && !inviteLink.includes("/")) {
+          roomId = inviteLink;
+        }
+      }
+    }
+
+    if (!roomId) {
+      throw new Error("Enter a room code or paste a valid invite link.");
+    }
+
+    return {
+      inviteLink,
+      roomId,
+      serverUrl: this.validateUrlInput(serverUrl, "Server URL"),
+    };
+  }
+
+  buildInviteLink(roomId, publicBaseUrl, publicServerUrl) {
+    const inviteUrl = new URL(publicBaseUrl);
+    inviteUrl.searchParams.set("mode", "join");
+    inviteUrl.searchParams.set("room", roomId);
+    inviteUrl.searchParams.set("server", publicServerUrl);
+    return inviteUrl.toString();
+  }
+
+  async tryCopyText(text) {
+    if (!text || !navigator.clipboard?.writeText) {
+      return false;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async copyInviteLink() {
+    if (!this.onlineState.inviteLink) {
+      return;
+    }
+
+    const copied = await this.tryCopyText(this.onlineState.inviteLink);
+    if (copied) {
+      this.updateNetworkState({
+        status: "Invite link copied to clipboard.",
+      });
+      return;
+    }
+
+    this.updateNetworkState({
+      status: "Clipboard access is unavailable in this browser. Copy the invite link manually from the top bar.",
+    });
+  }
+
+  async stopHostedAccess() {
+    if (this.onlineState.hostingProvider !== "cloudflare-quick" || !this.onlineState.hostedByThisClient) {
+      return;
+    }
+
+    try {
+      await stopCloudflareQuickTunnel({
+        serverUrl: this.onlineState.serverUrl || this.defaultServerUrl(),
+      });
+    } catch {}
+  }
+
+  async hostOnlineMatch() {
+    let setup;
+
+    try {
+      setup = this.getHostSetupValues();
+    } catch (error) {
+      this.onlineState = this.createOnlineState({
+        status: error.message,
+      });
+      this.screen = "host-setup";
+      this.updateViewUi();
+      return;
+    }
+
+    let hostedAccess;
+
+    try {
+      this.onlineState = this.createOnlineState({
+        status: "Requesting Cloudflare Quick Tunnel links from the local server...",
+      });
+      this.screen = "host-setup";
+      this.updateViewUi();
+
+      hostedAccess = await startCloudflareQuickTunnel({
+        serverUrl: setup.localServerUrl,
+        clientTargetUrl: setup.clientTargetUrl,
+        serverTargetUrl: setup.localServerUrl,
+      });
+    } catch (error) {
+      this.onlineState = this.createOnlineState({
+        status: `Unable to prepare Cloudflare Quick Tunnel hosting: ${error.message}`,
+      });
+      this.screen = "host-setup";
+      this.updateViewUi();
+      return;
+    }
+
+    await this.connectOnline({
+      modeLabel: "hosting",
+      serverUrl: setup.localServerUrl,
+      connect: (client) => client.hostMatch(),
+      successStatus: (roomId) => `Room ${roomId} is live. Waiting for the opposing captain to join.`,
+      successScreen: "battle",
+      screenOnFailure: "host-setup",
+      extraState: {
+        publicAppUrl: hostedAccess.publicAppUrl,
+        publicServerUrl: hostedAccess.publicServerUrl,
+        hostingProvider: "cloudflare-quick",
+        hostedByThisClient: true,
+      },
+      onSuccess: async (roomId) => {
+        const inviteLink = this.buildInviteLink(roomId, hostedAccess.publicAppUrl, hostedAccess.publicServerUrl);
+        const copied = await this.tryCopyText(inviteLink);
+        this.updateNetworkState({
+          inviteLink,
+          publicAppUrl: hostedAccess.publicAppUrl,
+          publicServerUrl: hostedAccess.publicServerUrl,
+          status: copied
+            ? `Invite copied. Room ${roomId} is waiting for the opposing captain.`
+            : `Room ${roomId} is live. Copy the invite link from the top bar and send it to your challenger.`,
+        });
+      },
+    });
+  }
+
+  async joinOnlineMatch() {
+    let setup;
+
+    try {
+      setup = this.getJoinSetupValues();
+    } catch (error) {
+      this.onlineState = this.createOnlineState({
+        status: error.message,
+      });
+      this.screen = "join-setup";
+      this.updateViewUi();
+      return;
+    }
+
+    await this.connectOnline({
+      modeLabel: "joining",
+      serverUrl: setup.serverUrl,
+      connect: (client) => client.joinMatch(setup.roomId),
+      successStatus: (joinedRoomId) => `Joined room ${joinedRoomId}. Stand by while the host bridge finishes sync.`,
+      successScreen: "battle",
+      screenOnFailure: "join-setup",
+      extraState: {
+        serverUrl: setup.serverUrl,
+        publicServerUrl: setup.serverUrl,
+        inviteLink: setup.inviteLink,
+        hostingProvider: null,
+        hostedByThisClient: false,
+      },
+      onSuccess: () => {
+        this.ui.joinRoomIdInput.value = setup.roomId;
+        this.ui.joinServerUrlInput.value = setup.serverUrl;
+      },
+    });
+  }
+
+  async connectOnline({ modeLabel, serverUrl, connect, successStatus, successScreen, screenOnFailure, extraState = {}, onSuccess = null }) {
+    await this.disconnectOnlineSession();
+
+    const client = new StarDuelOnlineClient({ serverUrl });
+
+    this.onlineClient = client;
+    this.sessionMode = "online";
+    this.screen = successScreen;
+    this.bindOnlineClient(client);
+    this.onlineState = this.createOnlineState({
+      connecting: true,
+      connected: false,
+      serverUrl,
+      ...extraState,
+      status: `${modeLabel === "hosting" ? "Hosting" : "Joining"} online session via ${serverUrl}...`,
+    });
+    this.updateViewUi();
+
+    try {
+      const roomId = await connect(client);
+      this.screen = successScreen;
+      this.updateNetworkState({
+        connecting: false,
+        connected: true,
+        roomId,
+        status: successStatus(roomId),
+      });
+      if (typeof onSuccess === "function") {
+        onSuccess(roomId);
+      }
+    } catch (error) {
+      await this.disconnectOnlineSession();
+      this.sessionMode = "local";
+      this.screen = screenOnFailure;
+      this.onlineState = this.createOnlineState({
+        serverUrl,
+        ...extraState,
+        status: `Unable to ${modeLabel} online session: ${error.message}`,
+      });
+      this.updateViewUi();
+    }
+  }
+
+  bindOnlineClient(client) {
+    this.onlineUnsubscribers = [
+      client.on("snapshot", (payload) => {
+        this.applyRemoteSnapshot(payload);
+      }),
+      client.on("presence", (payload) => {
+        const previousCount = this.getConnectedPlayerCount();
+        const players = payload.players ?? [];
+        const connectedCount = players.filter((player) => player.connected).length;
+        this.updateNetworkState({
+          players,
+          status: connectedCount >= 2
+            ? "Both captains connected. Online battle live."
+            : this.onlineState.role === "player1"
+              ? `Room ${this.onlineState.roomId || "pending"} is open. Waiting for the opposing captain to dock.`
+              : `Connected to room ${this.onlineState.roomId || "pending"}. Waiting for the host bridge to come online.`,
+        });
+        if (previousCount < 2 && connectedCount >= 2) {
+          this.requestOpeningAlert();
+        }
+      }),
+      client.on("roomInfo", (payload) => {
+        this.updateNetworkState({
+          roomId: payload.roomId,
+          seatIndex: payload.seatIndex,
+          role: payload.role,
+          status: `Connected to room ${payload.roomId} as ${payload.role === "player1" ? "Player 1" : "Player 2"}. Waiting for full crew readiness.`,
+        });
+      }),
+      client.on("serverEvents", (payload) => {
+        this.applyRemoteEvents(payload);
+      }),
+      client.on("roomError", (payload) => {
+        this.updateNetworkState({
+          status: payload.message,
+        });
+      }),
+      client.on("leave", () => {
+        if (this.isOnlineMode()) {
+          this.updateNetworkState({
+            connected: false,
+            players: [],
+            status: "Disconnected from the online room. Choose a mode to reconnect or return to local hot-seat.",
+          });
+        }
+      }),
+    ];
+  }
+
+  async disconnectOnlineSession() {
+    const client = this.onlineClient;
+    const hostedAccessWasActive = this.onlineState.hostedByThisClient;
+
+    this.onlineUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.onlineUnsubscribers = [];
+    this.onlineClient = null;
+
+    if (client) {
+      try {
+        await client.leaveMatch();
+      } catch {}
+    }
+
+    if (hostedAccessWasActive) {
+      await this.stopHostedAccess();
+    }
+  }
+
+  syncState() {
+    this.state = this.engine.getState();
   }
 
   resetGame() {
-    this.state = this.createInitialState();
+    if (this.isOnlineConnected()) {
+      this.issueOnlineCommand(COMMAND_TYPES.resetBattle);
+      return;
+    }
+
+    this.engine.resetGame();
+    this.syncState();
     this.renderUi();
     this.requestOpeningAlert();
   }
 
   tick(delta) {
-    if (this.state.turnCue) {
-      this.state.turnCue.timeLeft = Math.max(0, this.state.turnCue.timeLeft - delta);
-      if (this.state.turnCue.timeLeft === 0) {
-        this.state.turnCue = null;
-      }
+    if (!this.isOnlineMode()) {
+      this.engine.tick(delta);
+      this.syncState();
+      this.processEngineEvents();
     }
-
-    if (this.state.animation) {
-      this.state.animation.elapsed += delta;
-      if (!this.state.animation.resolved && this.state.animation.elapsed >= this.state.animation.flightMs) {
-        this.resolveTorpedoAnimation(this.state.animation);
-      }
-      if (this.state.animation.elapsed >= this.state.animation.flightMs + this.state.animation.impactMs) {
-        this.finishTorpedoAnimation();
-      }
-    }
-
     this.renderUi();
+  }
+
+  processEngineEvents() {
+    this.processGameplayEvents(this.engine.flushEvents());
+  }
+
+  processGameplayEvents(events) {
+    events.forEach((event) => {
+      switch (event.type) {
+        case "torpedo_launched":
+          this.playTorpedoLaunchSound();
+          break;
+        case "torpedo_impact":
+          if (event.outcome === "hit" || event.outcome === "asteroid") {
+            this.playSound(SOUND_KEYS.explosion);
+          }
+          break;
+        case "code_red":
+          this.playCodeRedSound();
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  applyRemoteSnapshot(snapshot) {
+    if (!snapshot?.state) {
+      return;
+    }
+
+    this.engine.replaceState(snapshot.state);
+    this.syncState();
+    this.updateNetworkState({
+      roomId: snapshot.roomId ?? this.onlineState.roomId,
+      players: snapshot.players ?? this.onlineState.players,
+    });
+    this.renderUi();
+  }
+
+  applyRemoteEvents(payload) {
+    this.processGameplayEvents(payload?.events ?? []);
+  }
+
+  issueCommand(commandType, payload = {}) {
+    if (this.isOnlineMode()) {
+      this.issueOnlineCommand(commandType, payload);
+      return;
+    }
+
+    this.issueLocalCommand(commandType, payload);
+  }
+
+  issueLocalCommand(commandType, payload = {}) {
+    this.engine.applyCommand(createCommand(commandType, payload));
+    this.syncState();
+    this.processEngineEvents();
+  }
+
+  issueOnlineCommand(commandType, payload = {}) {
+    if (!this.isOnlineConnected()) {
+      this.updateNetworkState({
+        status: "Connect to an online room before issuing commands.",
+      });
+      return;
+    }
+
+    try {
+      this.onlineClient.sendCommand(createCommand(commandType, payload));
+    } catch (error) {
+      this.updateNetworkState({
+        status: `Unable to send command: ${error.message}`,
+      });
+    }
   }
 
   handleResize() {
@@ -391,6 +795,10 @@ export class StarDuelApp {
   }
 
   handleKeydown(event) {
+    if (!this.isBattleView()) {
+      return;
+    }
+
     const key = event.key.toLowerCase();
 
     this.flushPendingOpeningAlert();
@@ -430,30 +838,22 @@ export class StarDuelApp {
 
   handleMoveKey(key) {
     if (key === "arrowleft") {
-      this.rotateActiveShip(-1);
+      this.issueCommand(COMMAND_TYPES.rotateLeft);
       return true;
     }
 
     if (key === "arrowright") {
-      this.rotateActiveShip(1);
+      this.issueCommand(COMMAND_TYPES.rotateRight);
       return true;
     }
 
     if (key === "arrowup") {
-      this.moveShipForward();
+      this.issueCommand(COMMAND_TYPES.moveForward);
       return true;
     }
 
     if (key === "arrowdown") {
-      const ship = this.getActivePlayer();
-      if (!this.state.moveContext.actionCommitted) {
-        this.finishMoveMode(`${ship.label} canceled movement before committing an action.`);
-        this.setStatus(`${ship.label} canceled movement.`);
-      } else {
-        this.finishMoveMode(`${ship.label} locked movement after ${this.state.moveContext.stepsTaken} hexes.`);
-        this.setStatus(`${ship.label} ended movement.`);
-      }
-
+      this.issueCommand(COMMAND_TYPES.endMove);
       return true;
     }
 
@@ -463,22 +863,22 @@ export class StarDuelApp {
   handleCommandKey(key) {
     switch (key) {
       case "arrowleft":
-        this.rotateActiveShip(-1);
+        this.issueCommand(COMMAND_TYPES.rotateLeft);
         return true;
       case "arrowright":
-        this.rotateActiveShip(1);
+        this.issueCommand(COMMAND_TYPES.rotateRight);
         return true;
       case "m":
-        this.beginMoveAction();
+        this.issueCommand(COMMAND_TYPES.beginMove);
         return true;
       case "s":
-        this.toggleShields();
+        this.issueCommand(COMMAND_TYPES.toggleShields);
         return true;
       case "f":
-        this.fireTorpedo();
+        this.issueCommand(COMMAND_TYPES.fireTorpedo);
         return true;
       case "e":
-        this.endTurn("ended the turn early");
+        this.issueCommand(COMMAND_TYPES.endTurn);
         return true;
       default:
         return false;
@@ -595,552 +995,37 @@ export class StarDuelApp {
   }
 
   getActivePlayer() {
-    return this.state.players[this.state.activeIndex];
+    return this.engine.getActivePlayer();
   }
 
   getOpponent(index = this.state.activeIndex) {
-    return this.state.players[index === 0 ? 1 : 0];
-  }
-
-  addLog(message) {
-    this.state.log.unshift(message);
-    this.state.log = this.state.log.slice(0, LOG_LIMIT);
-  }
-
-  setStatus(message) {
-    this.state.status = message;
-  }
-
-  announceTurnCue(playerIndex, label, detail, duration = 1800) {
-    this.state.turnCue = {
-      playerIndex,
-      label,
-      detail,
-      timeLeft: duration,
-    };
-  }
-
-  getHitChance(distance) {
-    if (distance <= 0) {
-      return 100;
-    }
-
-    return Math.max(0, 95 - (distance - 1) * 5);
-  }
-
-  oddRToCube(col, row) {
-    const x = col - (row - (row & 1)) / 2;
-    const z = row;
-    const y = -x - z;
-    return { x, y, z };
-  }
-
-  cubeToOddR(cube) {
-    return {
-      col: cube.x + (cube.z - (cube.z & 1)) / 2,
-      row: cube.z,
-    };
-  }
-
-  cubeLerp(a, b, t) {
-    return {
-      x: Phaser.Math.Linear(a.x, b.x, t),
-      y: Phaser.Math.Linear(a.y, b.y, t),
-      z: Phaser.Math.Linear(a.z, b.z, t),
-    };
-  }
-
-  cubeRound(cube) {
-    let rx = Math.round(cube.x);
-    let ry = Math.round(cube.y);
-    let rz = Math.round(cube.z);
-
-    const xDiff = Math.abs(rx - cube.x);
-    const yDiff = Math.abs(ry - cube.y);
-    const zDiff = Math.abs(rz - cube.z);
-
-    if (xDiff > yDiff && xDiff > zDiff) {
-      rx = -ry - rz;
-    } else if (yDiff > zDiff) {
-      ry = -rx - rz;
-    } else {
-      rz = -rx - ry;
-    }
-
-    return { x: rx, y: ry, z: rz };
+    return this.engine.getOpponent(index);
   }
 
   getDistance(a, b) {
-    const aCube = this.oddRToCube(a.col, a.row);
-    const bCube = this.oddRToCube(b.col, b.row);
-
-    return Math.max(
-      Math.abs(aCube.x - bCube.x),
-      Math.abs(aCube.y - bCube.y),
-      Math.abs(aCube.z - bCube.z)
-    );
-  }
-
-  getHexLine(a, b) {
-    const distance = this.getDistance(a, b);
-
-    if (distance === 0) {
-      return [{ col: a.col, row: a.row }];
-    }
-
-    const from = this.oddRToCube(a.col, a.row);
-    const to = this.oddRToCube(b.col, b.row);
-    const path = [];
-
-    for (let step = 0; step <= distance; step += 1) {
-      const t = distance === 0 ? 0 : step / distance;
-      const cube = this.cubeRound(this.cubeLerp(from, to, t));
-      const oddR = this.cubeToOddR(cube);
-      path.push({ col: oddR.col, row: oddR.row });
-    }
-
-    return path;
-  }
-
-  coordinateText(ship) {
-    return `${String(ship.col + 1).padStart(2, "0")} / ${String(ship.row + 1).padStart(2, "0")}`;
-  }
-
-  tileKey(col, row) {
-    return `${col},${row}`;
+    return this.engine.getDistance(a, b);
   }
 
   getNeighbor(col, row, direction) {
-    const isOddRow = row & 1;
-    const evenRowOffsets = {
-      nw: { col: -1, row: -1 },
-      ne: { col: 0, row: -1 },
-      w: { col: -1, row: 0 },
-      e: { col: 1, row: 0 },
-      sw: { col: -1, row: 1 },
-      se: { col: 0, row: 1 },
-    };
-    const oddRowOffsets = {
-      nw: { col: 0, row: -1 },
-      ne: { col: 1, row: -1 },
-      w: { col: -1, row: 0 },
-      e: { col: 1, row: 0 },
-      sw: { col: 0, row: 1 },
-      se: { col: 1, row: 1 },
-    };
-
-    const offsets = isOddRow ? oddRowOffsets : evenRowOffsets;
-    const delta = offsets[direction];
-
-    return {
-      col: col + delta.col,
-      row: row + delta.row,
-    };
-  }
-
-  isInBounds(col, row) {
-    return col >= 0 && col < BOARD_COLS && row >= 0 && row < BOARD_ROWS;
+    return this.engine.getNeighbor(col, row, direction);
   }
 
   hasAsteroidAt(col, row) {
-    return this.state.asteroids.some((asteroid) => asteroid.col === col && asteroid.row === row);
-  }
-
-  getPowerupIndexAt(col, row) {
-    return this.state.powerups.findIndex((powerup) => powerup.col === col && powerup.row === row);
+    return this.engine.hasAsteroidAt(col, row);
   }
 
   getAsteroidBlocker(attacker, defender) {
-    const path = this.getHexLine(attacker, defender);
-
-    for (const tile of path.slice(1, -1)) {
-      if (this.hasAsteroidAt(tile.col, tile.row)) {
-        return tile;
-      }
-    }
-
-    return null;
+    return this.engine.getAsteroidBlocker(attacker, defender);
   }
 
-  rotateFacing(ship, step) {
-    const currentIndex = FACING_ORDER.indexOf(ship.facing);
-    const nextIndex = (currentIndex + step + FACING_ORDER.length) % FACING_ORDER.length;
-    ship.facing = FACING_ORDER[nextIndex];
-    return ship.facing;
-  }
-
-  consumeAction(ship) {
-    if (ship.actionsLeft <= 0) {
-      return false;
-    }
-
-    ship.actionsLeft -= 1;
-    return true;
-  }
-
-  evaluateVictory() {
-    const [playerOne, playerTwo] = this.state.players;
-
-    if (playerOne.hull <= 0 || playerTwo.hull <= 0) {
-      this.state.turnCue = null;
-      this.state.gameOver = true;
-
-      if (playerOne.hull === playerTwo.hull) {
-        this.state.winnerIndex = null;
-        this.setStatus("Both ships were destroyed. The duel ends in a draw.");
-        this.addLog("Both ships were destroyed. Draw.");
-        return true;
-      }
-
-      this.state.winnerIndex = playerOne.hull > playerTwo.hull ? 0 : 1;
-      this.setStatus(`${this.state.players[this.state.winnerIndex].label} wins by destroying the enemy hull.`);
-      this.addLog(`${this.state.players[this.state.winnerIndex].label} wins by destruction.`);
-      return true;
-    }
-
-    if (playerOne.torpedoes === 0 && playerTwo.torpedoes === 0) {
-      this.state.turnCue = null;
-      this.state.gameOver = true;
-
-      if (playerOne.hull === playerTwo.hull) {
-        this.state.winnerIndex = null;
-        this.setStatus("Both ships are out of torpedoes. Hull totals are tied. Draw.");
-        this.addLog("Both ships expended all torpedoes. Draw.");
-        return true;
-      }
-
-      this.state.winnerIndex = playerOne.hull > playerTwo.hull ? 0 : 1;
-      this.setStatus(`${this.state.players[this.state.winnerIndex].label} wins on remaining hull after both arsenals run dry.`);
-      this.addLog(`${this.state.players[this.state.winnerIndex].label} wins on remaining hull after both arsenals ran dry.`);
-      return true;
-    }
-
-    return false;
-  }
-
-  endTurn(reason) {
-    if (this.state.gameOver) {
-      return;
-    }
-
-    const current = this.getActivePlayer();
-    const nextIndex = this.state.activeIndex === 0 ? 1 : 0;
-    const next = this.state.players[nextIndex];
-
-    current.actionsLeft = 0;
-    this.state.activeIndex = nextIndex;
-    next.actionsLeft = MAX_ACTIONS;
-    this.state.phase = "command";
-    this.state.moveContext = null;
-
-    if (nextIndex === this.state.startingIndex) {
-      this.state.round += 1;
-    }
-
-    this.setStatus(`${next.label} is on deck. Pass the keyboard.`);
-    this.addLog(`${current.label} ${reason}. ${next.label} takes the helm.`);
-    this.announceTurnCue(nextIndex, "Turn Handoff", `${current.label} ${reason}. Pass controls to ${next.label}.`);
-  }
-
-  finishMoveMode(summaryMessage) {
-    if (this.state.phase !== "move") {
-      return;
-    }
-
-    this.state.phase = "command";
-    this.state.moveContext = null;
-
-    if (summaryMessage) {
-      this.addLog(summaryMessage);
-    }
-
-    if (!this.state.gameOver && this.getActivePlayer().actionsLeft === 0) {
-      this.endTurn("used the final available action");
-    }
-  }
-
-  beginMoveAction() {
-    const ship = this.getActivePlayer();
-
-    if (ship.actionsLeft <= 0) {
-      this.setStatus(`${ship.label} has no actions remaining.`);
-      return;
-    }
-
-    this.state.phase = "move";
-    this.state.moveContext = {
-      actionCommitted: false,
-      stepsRemaining: MOVE_RANGE,
-      stepsTaken: 0,
-    };
-    this.setStatus(`${ship.label} is plotting movement. Rotate with Left/Right, thrust with Up, finish with Down.`);
-    this.addLog(`${ship.label} begins a move action with up to ${MOVE_RANGE} forward thrusts.`);
-  }
-
-  moveShip(direction) {
-    const ship = this.getActivePlayer();
-    const destination = this.getNeighbor(ship.col, ship.row, direction);
-
-    if (!this.isInBounds(destination.col, destination.row)) {
-      this.setStatus("Navigation boundary reached.");
-      this.addLog(`${ship.label} tried to move ${DIRECTION_LABELS[direction]}, but the board edge blocked the path.`);
-      return;
-    }
-
-    if (this.hasAsteroidAt(destination.col, destination.row)) {
-      this.setStatus("Asteroid debris blocks the plotted course.");
-      this.addLog(`${ship.label} tried to move ${DIRECTION_LABELS[direction]}, but an asteroid blocked the path.`);
-      return;
-    }
-
-    if (!this.state.moveContext.actionCommitted) {
-      if (!this.consumeAction(ship)) {
-        this.setStatus(`${ship.label} has no actions remaining.`);
-        return;
-      }
-
-      this.state.moveContext.actionCommitted = true;
-    }
-
-    ship.col = destination.col;
-    ship.row = destination.row;
-    ship.facing = direction;
-    this.state.moveContext.stepsRemaining -= 1;
-    this.state.moveContext.stepsTaken += 1;
-    this.setStatus(`${ship.label} moved ${DIRECTION_LABELS[direction]}. ${this.state.moveContext.stepsRemaining} thrust${this.state.moveContext.stepsRemaining === 1 ? "" : "s"} remain in this move action.`);
-    this.addLog(`${ship.label} moved ${DIRECTION_LABELS[direction]} to ${this.coordinateText(ship)}.`);
-    this.collectPowerup(ship);
-
-    if (this.state.moveContext.stepsRemaining === 0) {
-      this.finishMoveMode(`${ship.label} completed a full ${MOVE_RANGE}-hex movement action.`);
-    }
-  }
-
-  collectPowerup(ship) {
-    const powerupIndex = this.getPowerupIndexAt(ship.col, ship.row);
-
-    if (powerupIndex === -1) {
-      return;
-    }
-
-    this.state.powerups.splice(powerupIndex, 1);
-    ship.boostCharges += 1;
-    this.setStatus(`${ship.label} collected a crystal powerup. The next torpedo gains +50% damage.`);
-    this.addLog(`${ship.label} collected a crystal powerup. ${ship.boostCharges} boosted shot${ship.boostCharges === 1 ? "" : "s"} ready.`);
-  }
-
-  moveShipForward() {
-    this.moveShip(this.getActivePlayer().facing);
-  }
-
-  rotateActiveShip(step) {
-    const ship = this.getActivePlayer();
-    const facing = this.rotateFacing(ship, step);
-    const rotationLabel = step < 0 ? "left" : "right";
-
-    if (this.state.phase === "move") {
-      this.setStatus(`${ship.label} rotated ${rotationLabel}. Up moves ${DIRECTION_LABELS[facing]}. ${this.state.moveContext.stepsRemaining} thrust${this.state.moveContext.stepsRemaining === 1 ? "" : "s"} remain in this action.`);
-    } else {
-      this.setStatus(`${ship.label} rotated ${rotationLabel} to face ${DIRECTION_LABELS[facing]}.`);
-    }
-  }
-
-  toggleShields() {
-    const ship = this.getActivePlayer();
-
-    if (!this.consumeAction(ship)) {
-      this.setStatus(`${ship.label} has no actions remaining.`);
-      return;
-    }
-
-    if (ship.shieldsUp) {
-      ship.shieldsUp = false;
-      this.setStatus(`${ship.label} lowered shields.`);
-      this.addLog(`${ship.label} lowered shields.`);
-    } else if (ship.shield <= 0) {
-      ship.actionsLeft += 1;
-      this.setStatus(`${ship.label} cannot raise depleted shields.`);
-      this.addLog(`${ship.label} tried to raise depleted shields.`);
-      return;
-    } else {
-      ship.shieldsUp = true;
-      this.setStatus(`${ship.label} raised shields.`);
-      this.addLog(`${ship.label} raised shields.`);
-    }
-
-    if (!this.state.gameOver && ship.actionsLeft === 0) {
-      this.endTurn("used both actions");
-    }
-  }
-
-  applyDamage(defender, amount) {
-    let overflow = amount;
-    let absorbed = 0;
-
-    if (defender.shieldsUp && defender.shield > 0) {
-      absorbed = Math.min(defender.shield, amount);
-      defender.shield -= absorbed;
-      overflow -= absorbed;
-
-      if (defender.shield <= 0) {
-        defender.shield = 0;
-        defender.shieldsUp = false;
-      }
-    }
-
-    if (overflow > 0) {
-      defender.hull = Math.max(0, defender.hull - overflow);
-    }
-
-    return { absorbed, hullDamage: overflow };
-  }
-
-  maybeTriggerCodeRed(ship) {
-    if (ship.hull >= CODE_RED_HULL_THRESHOLD || ship.codeRedTriggered) {
-      return;
-    }
-
-    ship.codeRedTriggered = true;
-    this.addLog(`${ship.label} dropped below 31% hull integrity.`);
-    this.playCodeRedSound();
-  }
-
-  beginTorpedoAnimation(attacker, defender, distance, chance, hit, options = {}) {
-    const impactTile = options.impactTile || {
-      col: defender.col,
-      row: defender.row,
-    };
-
-    this.state.phase = "animation";
-    this.state.animation = {
-      kind: "torpedo",
-      attackerId: attacker.id,
-      defenderId: defender.id,
-      distance,
-      chance,
-      damageAmount: TORPEDO_DAMAGE,
-      boosted: false,
-      blockedByAsteroid: Boolean(options.blockedByAsteroid),
-      hit,
-      elapsed: 0,
-      flightMs: TORPEDO_FLIGHT_MS,
-      impactMs: TORPEDO_IMPACT_MS,
-      resolved: false,
-      missSide: Math.random() < 0.5 ? -1 : 1,
-      from: {
-        col: attacker.col,
-        row: attacker.row,
-      },
-      to: impactTile,
-    };
-    this.setStatus(`${attacker.label} launched a torpedo. Weapons release in progress.`);
-  }
-
-  resolveTorpedoAnimation(animation) {
-    if (animation.resolved) {
-      return;
-    }
-
-    const attacker = this.state.players[animation.attackerId];
-    const defender = this.state.players[animation.defenderId];
-
-    animation.resolved = true;
-
-    if (animation.blockedByAsteroid) {
-      this.playSound(SOUND_KEYS.explosion);
-      this.setStatus(`${attacker.label}'s ${animation.boosted ? "boosted " : ""}torpedo struck an asteroid at ${this.coordinateText(animation.to)}.`);
-      this.addLog(`${attacker.label}'s ${animation.boosted ? "boosted " : ""}torpedo impacted asteroid debris at ${this.coordinateText(animation.to)}.`);
-    } else if (animation.hit) {
-      const damage = this.applyDamage(defender, animation.damageAmount);
-      animation.damage = damage;
-      this.playSound(SOUND_KEYS.explosion);
-      this.maybeTriggerCodeRed(defender);
-      this.setStatus(`${attacker.label} scored a ${animation.boosted ? "boosted " : ""}hit. ${damage.absorbed} shield and ${damage.hullDamage} hull damage applied.`);
-      this.addLog(`${attacker.label} hit ${defender.label} for ${animation.damageAmount} total damage${animation.boosted ? " with a crystal boost" : ""}.`);
-    } else {
-      this.setStatus(`${attacker.label} missed the ${animation.boosted ? "boosted " : ""}shot.`);
-      this.addLog(`${attacker.label} missed${animation.boosted ? " with a crystal boost" : ""}.`);
-    }
-  }
-
-  finishTorpedoAnimation() {
-    const animation = this.state.animation;
-
-    if (!animation) {
-      return;
-    }
-
-    this.state.animation = null;
-    this.state.phase = "command";
-
-    if (this.evaluateVictory()) {
-      return;
-    }
-
-    const attacker = this.state.players[animation.attackerId];
-
-    if (attacker.actionsLeft === 0) {
-      this.endTurn("used both actions");
-    }
-  }
-
-  fireTorpedo() {
-    const attacker = this.getActivePlayer();
-    const defender = this.getOpponent();
-
-    if (attacker.actionsLeft <= 0) {
-      this.setStatus(`${attacker.label} has no actions remaining.`);
-      return;
-    }
-
-    if (attacker.torpedoes <= 0) {
-      this.setStatus(`${attacker.label} has no torpedoes remaining.`);
-      this.addLog(`${attacker.label} attempted to fire with empty launchers.`);
-      return;
-    }
-
-    if (attacker.shieldsUp) {
-      this.setStatus("Lower shields before firing torpedoes.");
-      this.addLog(`${attacker.label} cannot fire while shields are raised.`);
-      return;
-    }
-
-    this.consumeAction(attacker);
-    attacker.torpedoes -= 1;
-    const boosted = attacker.boostCharges > 0;
-
-    if (boosted) {
-      attacker.boostCharges -= 1;
-    }
-
-    const distance = this.getDistance(attacker, defender);
-    const blocker = this.getAsteroidBlocker(attacker, defender);
-    const chance = this.getHitChance(distance);
-    const hit = blocker ? false : Math.random() * 100 < chance;
-    const damageAmount = boosted
-      ? Math.round(TORPEDO_DAMAGE * DAMAGE_POWERUP_MULTIPLIER)
-      : TORPEDO_DAMAGE;
-
-    if (blocker) {
-      this.addLog(`${attacker.label} fired${boosted ? " a crystal-boosted torpedo" : ""}, but asteroid debris blocked the firing lane at ${this.coordinateText(blocker)}.`);
-    } else {
-      this.addLog(`${attacker.label} fired${boosted ? " a crystal-boosted torpedo" : ""} from ${distance} hexes with a ${chance}% hit chance.`);
-    }
-
-    this.playTorpedoLaunchSound();
-    this.beginTorpedoAnimation(attacker, defender, distance, chance, hit, {
-      impactTile: blocker || {
-        col: defender.col,
-        row: defender.row,
-      },
-      blockedByAsteroid: Boolean(blocker),
-    });
-    this.state.animation.damageAmount = damageAmount;
-    this.state.animation.boosted = boosted;
+  coordinateText(target) {
+    return this.engine.coordinateText(target);
   }
 
   renderUi() {
     const active = this.getActivePlayer();
+    const perspectivePlayerIndex = this.getPerspectivePlayerIndex();
+    const isPerspectiveTurn = perspectivePlayerIndex === null || perspectivePlayerIndex === this.state.activeIndex;
     const cue = this.state.turnCue;
     const bannerPlayerIndex = cue ? cue.playerIndex : this.state.activeIndex;
     const label = cue
@@ -1165,13 +1050,17 @@ export class StarDuelApp {
           ? "Torpedo in flight. Controls locked until the weapon resolves."
           : this.state.phase === "move"
             ? `${this.state.moveContext.stepsRemaining} thrust${this.state.moveContext.stepsRemaining === 1 ? "" : "s"} remain in this move action.`
-            : `${active.actionsLeft} action${active.actionsLeft === 1 ? "" : "s"} remaining.`;
+            : this.isOnlineMode()
+              ? isPerspectiveTurn
+                ? `${active.actionsLeft} action${active.actionsLeft === 1 ? "" : "s"} remaining on your bridge.`
+                : "Enemy bridge has initiative. Stand by for their maneuver."
+              : `${active.actionsLeft} action${active.actionsLeft === 1 ? "" : "s"} remaining. Pass the keyboard when the turn ends.`;
 
     this.ui.turnBanner.classList.remove("turn-banner--player-0", "turn-banner--player-1");
     this.ui.turnBanner.classList.add(`turn-banner--player-${bannerPlayerIndex}`);
     this.ui.turnBannerLabel.textContent = label;
     this.ui.turnBannerPlayer.textContent = playerText;
-    this.ui.turnBannerPlayer.style.color = PLAYER_CONFIG[bannerPlayerIndex].color;
+    this.ui.turnBannerPlayer.style.color = this.state.players[bannerPlayerIndex].color;
     this.ui.turnBannerDetail.textContent = detail;
     this.ui.turnBannerRound.textContent = `Round ${this.state.round}`;
     this.ui.turnBannerActions.textContent = this.state.gameOver
@@ -1191,7 +1080,7 @@ export class StarDuelApp {
     this.state.players.forEach((ship, index) => {
       const enemy = this.getOpponent(index);
       const range = this.getDistance(ship, enemy);
-      const hitChance = this.getHitChance(range);
+      const hitChance = this.engine.getHitChance(range);
       const blocker = this.getAsteroidBlocker(ship, enemy);
       const elements = this.ui.players[index];
 
@@ -1242,9 +1131,11 @@ export class StarDuelApp {
   }
 
   hexCenter(col, row, metrics) {
+    const projected = this.projectCoordinate(col, row);
+
     return {
-      x: metrics.offsetX + Math.sqrt(3) * metrics.radius * (col + 0.5 * (row & 1)),
-      y: metrics.offsetY + metrics.radius * 1.5 * row,
+      x: metrics.offsetX + Math.sqrt(3) * metrics.radius * (projected.col + 0.5 * (projected.row & 1)),
+      y: metrics.offsetY + metrics.radius * 1.5 * projected.row,
     };
   }
 
@@ -1272,7 +1163,7 @@ export class StarDuelApp {
 
     if (this.state.phase === "move") {
       const neighbor = this.getNeighbor(active.col, active.row, active.facing);
-      if (this.isInBounds(neighbor.col, neighbor.row)) {
+      if (this.engine.isInBounds(neighbor.col, neighbor.row)) {
         const highlightColor = this.hasAsteroidAt(neighbor.col, neighbor.row)
           ? alphaColor(BATTLE_COLORS.blockedHighlight, 0.22)
           : alphaColor(BATTLE_COLORS.moveHighlight, 0.18);
@@ -1384,7 +1275,7 @@ export class StarDuelApp {
 
     const outerPoints = this.getShipPoints(ship.shipClass, radius);
     const accentPoints = this.getShipAccentPoints(ship.shipClass, radius);
-    const rotation = DIRECTION_ROTATIONS[ship.facing] || 0;
+    const rotation = (DIRECTION_ROTATIONS[ship.facing] || 0) + this.getBoardPerspectiveOffset();
     const transformedOuter = this.transformPoints(outerPoints, cx, cy, rotation);
     const transformedAccent = this.transformPoints(accentPoints, cx, cy, rotation);
 

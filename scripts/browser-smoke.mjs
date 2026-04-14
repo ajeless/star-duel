@@ -38,6 +38,8 @@ page.on("console", (message) => {
 
 try {
   await page.goto(targetUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#choose-local-button");
+  await page.click("#choose-local-button");
   await page.waitForSelector("#game-root canvas");
   await page.waitForTimeout(400);
 

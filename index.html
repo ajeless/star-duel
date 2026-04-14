@@ -14,9 +14,119 @@
           <p class="eyebrow">Retro Tactical Sandbox</p>
           <h1>Star Duel</h1>
           <p class="subtitle">
-            Phaser-powered hot-seat ship combat on a hex battlefield.
+            Phaser-powered hot-seat and Colyseus-backed online ship combat on a hex battlefield.
           </p>
         </div>
+      </header>
+
+      <section class="launchpad" id="launchpad" aria-label="Mode selection">
+        <section class="console-block launchpad-screen" id="screen-mode-select">
+          <span class="launchpad__eyebrow">Mode Select</span>
+          <h2 class="launchpad__title">Choose Your Command Path</h2>
+          <p class="launchpad__copy">
+            Pick how the battle starts. Local hot-seat jumps straight into the shared bridge, while online play routes
+            each captain to a dedicated single-seat view.
+          </p>
+          <div class="mode-grid">
+            <button id="choose-local-button" class="mode-card" type="button">
+              <span class="mode-card__eyebrow">Shared Bridge</span>
+              <strong>Local Hot-Seat</strong>
+              <span>Two captains rotate the same keyboard while both HUDs stay live on one screen.</span>
+            </button>
+            <button id="choose-host-button" class="mode-card" type="button">
+              <span class="mode-card__eyebrow">Online Control</span>
+              <strong>Host Online</strong>
+              <span>Create a room, publish the public address details, and wait for a challenger to dock.</span>
+            </button>
+            <button id="choose-join-button" class="mode-card" type="button">
+              <span class="mode-card__eyebrow">Online Control</span>
+              <strong>Join Online</strong>
+              <span>Use a room code or invite link to join an existing duel from your own browser.</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="console-block launchpad-screen" id="screen-host-setup" hidden>
+          <span class="launchpad__eyebrow">Host Online</span>
+          <h2 class="launchpad__title">Open A Public Room</h2>
+          <p class="launchpad__copy">
+            Star Duel will ask the local server to create temporary public Cloudflare Quick Tunnel links for both the
+            game app and the match server. When the room is ready, the invite link is copied automatically and you drop
+            straight into the battle view to wait for contact.
+          </p>
+          <details class="launchpad-advanced">
+            <summary>Advanced Host Settings</summary>
+            <div class="launchpad-form launchpad-form--advanced">
+              <label class="network-field">
+                <span>Local Server URL</span>
+                <input id="host-server-url-input" type="text" spellcheck="false" />
+              </label>
+            </div>
+          </details>
+          <p class="launchpad__status" id="host-status-text">
+            Hosting will generate and copy a temporary public invite link.
+          </p>
+          <div class="launchpad__actions">
+            <button id="host-back-button" class="network-button" type="button">Back</button>
+            <button id="host-create-button" class="network-button network-button--active" type="button">Host Match</button>
+          </div>
+        </section>
+
+        <section class="console-block launchpad-screen" id="screen-join-setup" hidden>
+          <span class="launchpad__eyebrow">Join Online</span>
+          <h2 class="launchpad__title">Dock With An Existing Room</h2>
+          <p class="launchpad__copy">
+            Paste the invite link your host shared with you. If the link already includes the room and server details,
+            that is all you need.
+          </p>
+          <div class="launchpad-form">
+            <label class="network-field">
+              <span>Invite Link</span>
+              <input id="join-invite-input" type="text" spellcheck="false" placeholder="https://bright-nebula.trycloudflare.com/?room=..." />
+            </label>
+          </div>
+          <details class="launchpad-advanced">
+            <summary>Manual Room Entry</summary>
+            <div class="launchpad-form launchpad-form--advanced">
+              <label class="network-field">
+                <span>Room Code</span>
+                <input id="join-room-id-input" type="text" spellcheck="false" />
+              </label>
+              <label class="network-field">
+                <span>Server URL</span>
+                <input id="join-server-url-input" type="text" spellcheck="false" />
+              </label>
+            </div>
+          </details>
+          <p class="launchpad__status" id="join-status-text">
+            Paste a valid invite link to join the duel.
+          </p>
+          <div class="launchpad__actions">
+            <button id="join-back-button" class="network-button" type="button">Back</button>
+            <button id="join-match-button" class="network-button network-button--active" type="button">Join Match</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="battle-shell" id="battle-shell" hidden>
+        <section class="console-block battle-session-bar" aria-label="Session status">
+          <div class="battle-session-bar__summary">
+            <div class="battle-session-bar__meta">
+              <span class="turn-banner__chip" id="session-mode-chip">Local Hot-Seat</span>
+              <span class="turn-banner__chip" id="network-room-chip">Room: none</span>
+              <span class="turn-banner__chip" id="network-seat-chip">Seat: offline</span>
+              <span class="turn-banner__chip" id="network-presence-chip">Crew: local only</span>
+            </div>
+            <p class="battle-session-bar__status" id="network-status-text">
+              Local hot-seat battle live. Use Change Mode to pick a different command path.
+            </p>
+          </div>
+          <div class="battle-session-bar__buttons">
+            <button id="copy-invite-button" class="network-button" type="button">Copy Invite</button>
+            <button id="change-mode-button" class="network-button" type="button">Change Mode</button>
+          </div>
+        </section>
+
         <section class="console-block controls-panel" aria-label="Control reference">
           <span class="controls-panel__label">Command Keys</span>
           <ul class="control-list control-list--pill">
@@ -30,67 +140,67 @@
             <li><strong>R</strong><span>Reset Battle</span></li>
           </ul>
         </section>
-      </header>
 
-      <section class="turn-banner" id="turn-banner" aria-live="polite">
-        <span class="turn-banner__label" id="turn-banner-label">Turn Control</span>
-        <strong class="turn-banner__player" id="turn-banner-player">Player 1 At Helm</strong>
-        <span class="turn-banner__detail" id="turn-banner-detail">2 actions remaining. Pass controls when the turn ends.</span>
-        <div class="turn-banner__meta">
-          <span class="turn-banner__chip" id="turn-banner-round">Round 1</span>
-          <span class="turn-banner__chip" id="turn-banner-actions">2 actions remaining</span>
-        </div>
-      </section>
-
-      <main class="battle-layout">
-        <aside class="hud hud-left" id="hud-player-1">
-          <div class="hud__title">Player 1</div>
-          <div class="hud__callsign">USS Vector</div>
-          <div class="hud__stat"><span>Hull</span><strong id="player-1-hull">100</strong></div>
-          <div class="hud__stat"><span>Shield Pool</span><strong id="player-1-shield">100</strong></div>
-          <div class="hud__stat"><span>Shield State</span><strong id="player-1-shield-state">DOWN</strong></div>
-          <div class="hud__stat"><span>Torpedoes</span><strong id="player-1-torpedoes">10</strong></div>
-          <div class="hud__stat"><span>Boost Shots</span><strong id="player-1-boost">0</strong></div>
-          <div class="hud__stat"><span>Actions Ready</span><strong id="player-1-actions">2</strong></div>
-          <div class="hud__stat"><span>Range To Target</span><strong id="player-1-range">0</strong></div>
-          <div class="hud__stat"><span>Hit Chance</span><strong id="player-1-hit-chance">0%</strong></div>
-          <div class="hud__stat"><span>Coordinates</span><strong id="player-1-position">00 / 00</strong></div>
-        </aside>
-
-        <section class="arena-panel">
-          <div class="arena-frame">
-            <div id="game-root" aria-label="Star Duel battlefield"></div>
-            <div class="arena-overlay">
-              <span class="arena-overlay__label">Command Uplink</span>
-              <strong id="mode-label">Awaiting Orders</strong>
-              <span id="status-text">Lower shields before firing torpedoes.</span>
-            </div>
+        <section class="turn-banner" id="turn-banner" aria-live="polite">
+          <span class="turn-banner__label" id="turn-banner-label">Turn Control</span>
+          <strong class="turn-banner__player" id="turn-banner-player">Player 1 At Helm</strong>
+          <span class="turn-banner__detail" id="turn-banner-detail">2 actions remaining. Pass controls when the turn ends.</span>
+          <div class="turn-banner__meta">
+            <span class="turn-banner__chip" id="turn-banner-round">Round 1</span>
+            <span class="turn-banner__chip" id="turn-banner-actions">2 actions remaining</span>
           </div>
         </section>
 
-        <aside class="hud hud-right" id="hud-player-2">
-          <div class="hud__title">Player 2</div>
-          <div class="hud__callsign">IKS Specter</div>
-          <div class="hud__stat"><span>Hull</span><strong id="player-2-hull">100</strong></div>
-          <div class="hud__stat"><span>Shield Pool</span><strong id="player-2-shield">100</strong></div>
-          <div class="hud__stat"><span>Shield State</span><strong id="player-2-shield-state">DOWN</strong></div>
-          <div class="hud__stat"><span>Torpedoes</span><strong id="player-2-torpedoes">10</strong></div>
-          <div class="hud__stat"><span>Boost Shots</span><strong id="player-2-boost">0</strong></div>
-          <div class="hud__stat"><span>Actions Ready</span><strong id="player-2-actions">0</strong></div>
-          <div class="hud__stat"><span>Range To Target</span><strong id="player-2-range">0</strong></div>
-          <div class="hud__stat"><span>Hit Chance</span><strong id="player-2-hit-chance">0%</strong></div>
-          <div class="hud__stat"><span>Coordinates</span><strong id="player-2-position">00 / 00</strong></div>
-        </aside>
-      </main>
+        <main class="battle-layout">
+          <aside class="hud hud-left" id="hud-player-1">
+            <div class="hud__title">Player 1</div>
+            <div class="hud__callsign">USS Vector</div>
+            <div class="hud__stat"><span>Hull</span><strong id="player-1-hull">100</strong></div>
+            <div class="hud__stat"><span>Shield Pool</span><strong id="player-1-shield">100</strong></div>
+            <div class="hud__stat"><span>Shield State</span><strong id="player-1-shield-state">DOWN</strong></div>
+            <div class="hud__stat"><span>Torpedoes</span><strong id="player-1-torpedoes">10</strong></div>
+            <div class="hud__stat"><span>Boost Shots</span><strong id="player-1-boost">0</strong></div>
+            <div class="hud__stat"><span>Actions Ready</span><strong id="player-1-actions">2</strong></div>
+            <div class="hud__stat"><span>Range To Target</span><strong id="player-1-range">0</strong></div>
+            <div class="hud__stat"><span>Hit Chance</span><strong id="player-1-hit-chance">0%</strong></div>
+            <div class="hud__stat"><span>Coordinates</span><strong id="player-1-position">00 / 00</strong></div>
+          </aside>
 
-      <section class="console-grid">
-        <div class="console-block console-block--log">
-          <div class="console-block__heading">
-            <h2>Combat Log</h2>
-            <button id="reset-button" class="reset-button" type="button">Reset Battle</button>
+          <section class="arena-panel">
+            <div class="arena-frame">
+              <div id="game-root" aria-label="Star Duel battlefield"></div>
+              <div class="arena-overlay">
+                <span class="arena-overlay__label">Command Uplink</span>
+                <strong id="mode-label">Awaiting Orders</strong>
+                <span id="status-text">Lower shields before firing torpedoes.</span>
+              </div>
+            </div>
+          </section>
+
+          <aside class="hud hud-right" id="hud-player-2">
+            <div class="hud__title">Player 2</div>
+            <div class="hud__callsign">IKS Specter</div>
+            <div class="hud__stat"><span>Hull</span><strong id="player-2-hull">100</strong></div>
+            <div class="hud__stat"><span>Shield Pool</span><strong id="player-2-shield">100</strong></div>
+            <div class="hud__stat"><span>Shield State</span><strong id="player-2-shield-state">DOWN</strong></div>
+            <div class="hud__stat"><span>Torpedoes</span><strong id="player-2-torpedoes">10</strong></div>
+            <div class="hud__stat"><span>Boost Shots</span><strong id="player-2-boost">0</strong></div>
+            <div class="hud__stat"><span>Actions Ready</span><strong id="player-2-actions">0</strong></div>
+            <div class="hud__stat"><span>Range To Target</span><strong id="player-2-range">0</strong></div>
+            <div class="hud__stat"><span>Hit Chance</span><strong id="player-2-hit-chance">0%</strong></div>
+            <div class="hud__stat"><span>Coordinates</span><strong id="player-2-position">00 / 00</strong></div>
+          </aside>
+        </main>
+
+        <section class="console-grid">
+          <div class="console-block console-block--log">
+            <div class="console-block__heading">
+              <h2>Combat Log</h2>
+              <button id="reset-button" class="reset-button" type="button">Reset Battle</button>
+            </div>
+            <ol id="log-list" class="log-list" aria-live="polite"></ol>
           </div>
-          <ol id="log-list" class="log-list" aria-live="polite"></ol>
-        </div>
+        </section>
       </section>
     </div>
   </body>
