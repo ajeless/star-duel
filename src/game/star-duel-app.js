@@ -233,8 +233,31 @@ export class StarDuelApp {
       : null;
   }
 
+  isOnlineSingleSeatView() {
+    return this.isOnlineMode() && Number.isInteger(this.getPerspectivePlayerIndex());
+  }
+
+  isOnlineControlsLocked() {
+    if (!this.isOnlineMode()) {
+      return false;
+    }
+
+    if (!this.isOnlineConnected()) {
+      return true;
+    }
+
+    const perspectivePlayerIndex = this.getPerspectivePlayerIndex();
+    if (!Number.isInteger(perspectivePlayerIndex)) {
+      return true;
+    }
+
+    return this.state.activeIndex !== perspectivePlayerIndex;
+  }
+
   getBoardPerspectiveOffset() {
-    return this.getPerspectivePlayerIndex() === 1 ? Math.PI : 0;
+    const seatRotation = this.getPerspectivePlayerIndex() === 1 ? Math.PI : 0;
+    const onlineRotation = this.isOnlineSingleSeatView() ? Math.PI / 2 : 0;
+    return seatRotation + onlineRotation;
   }
 
   projectCoordinate(col, row) {
@@ -308,7 +331,9 @@ export class StarDuelApp {
 
     this.ui.copyInviteButton.hidden = !isOnline || !this.onlineState.inviteLink;
     this.ui.copyInviteButton.disabled = !this.onlineState.inviteLink;
+    this.ui.networkSeatChip.hidden = this.isOnlineSingleSeatView();
 
+    this.ui.shell.classList.toggle("app-shell--online-mode", this.isOnlineSingleSeatView());
     this.ui.shell.classList.remove("app-shell--online-seat-0", "app-shell--online-seat-1");
 
     if (this.getPerspectivePlayerIndex() === 0) {
@@ -515,7 +540,7 @@ export class StarDuelApp {
       modeLabel: "hosting",
       serverUrl: setup.localServerUrl,
       connect: (client) => client.hostMatch(),
-      successStatus: (roomId) => `Room ${roomId} is live. Waiting for the opposing captain to join.`,
+      successStatus: (roomId) => `Room ${roomId} is live. Waiting for your opponent to join.`,
       successScreen: "battle",
       screenOnFailure: "host-setup",
       extraState: {
@@ -532,7 +557,7 @@ export class StarDuelApp {
           publicAppUrl: hostedAccess.publicAppUrl,
           publicServerUrl: hostedAccess.publicServerUrl,
           status: copied
-            ? `Invite copied. Room ${roomId} is waiting for the opposing captain.`
+            ? `Invite copied. Room ${roomId} is waiting for your opponent.`
             : `Room ${roomId} is live. Copy the invite link from the top bar and send it to your challenger.`,
         });
       },
@@ -557,7 +582,7 @@ export class StarDuelApp {
       modeLabel: "joining",
       serverUrl: setup.serverUrl,
       connect: (client) => client.joinMatch(setup.roomId),
-      successStatus: (joinedRoomId) => `Joined room ${joinedRoomId}. Stand by while the host bridge finishes sync.`,
+      successStatus: (joinedRoomId) => `Joined room ${joinedRoomId}. Waiting for the match to finish syncing.`,
       successScreen: "battle",
       screenOnFailure: "join-setup",
       extraState: {
@@ -631,8 +656,8 @@ export class StarDuelApp {
           status: connectedCount >= 2
             ? "Both captains connected. Online battle live."
             : this.onlineState.role === "player1"
-              ? `Room ${this.onlineState.roomId || "pending"} is open. Waiting for the opposing captain to dock.`
-              : `Connected to room ${this.onlineState.roomId || "pending"}. Waiting for the host bridge to come online.`,
+              ? `Room ${this.onlineState.roomId || "pending"} is open. Waiting for your opponent to join.`
+              : `Connected to room ${this.onlineState.roomId || "pending"}. Waiting for the host state to finish syncing.`,
         });
         if (previousCount < 2 && connectedCount >= 2) {
           this.requestOpeningAlert();
@@ -643,7 +668,7 @@ export class StarDuelApp {
           roomId: payload.roomId,
           seatIndex: payload.seatIndex,
           role: payload.role,
-          status: `Connected to room ${payload.roomId} as ${payload.role === "player1" ? "Player 1" : "Player 2"}. Waiting for full crew readiness.`,
+          status: `Connected to room ${payload.roomId}. ${payload.role === "player1" ? "You are Player 1." : "You are Player 2."}`,
         });
       }),
       client.on("serverEvents", (payload) => {
@@ -810,6 +835,13 @@ export class StarDuelApp {
     if (key === "r") {
       event.preventDefault();
       this.resetGame();
+      return;
+    }
+
+    if (this.isOnlineControlsLocked()) {
+      if (["arrowleft", "arrowright", "arrowup", "arrowdown", "m", "s", "f", "e"].includes(key)) {
+        event.preventDefault();
+      }
       return;
     }
 
@@ -1026,9 +1058,12 @@ export class StarDuelApp {
     const active = this.getActivePlayer();
     const perspectivePlayerIndex = this.getPerspectivePlayerIndex();
     const isPerspectiveTurn = perspectivePlayerIndex === null || perspectivePlayerIndex === this.state.activeIndex;
+    const isOnlineSingleSeatView = this.isOnlineSingleSeatView();
+    const onlineControlsLocked = this.isOnlineControlsLocked();
+    const connectedCount = this.getConnectedPlayerCount();
     const cue = this.state.turnCue;
     const bannerPlayerIndex = cue ? cue.playerIndex : this.state.activeIndex;
-    const label = cue
+    let label = cue
       ? cue.label
       : this.state.gameOver
         ? "Battle Complete"
@@ -1037,12 +1072,12 @@ export class StarDuelApp {
           : this.state.phase === "move"
             ? "Move Action Live"
             : "Turn Control";
-    const playerText = this.state.gameOver
+    let playerText = this.state.gameOver
       ? this.state.winnerIndex === null
         ? "Draw"
         : `${this.state.players[this.state.winnerIndex].label} Wins`
       : `${active.label} At Helm`;
-    const detail = cue
+    let detail = cue
       ? cue.detail
       : this.state.gameOver
         ? this.state.status
@@ -1055,6 +1090,40 @@ export class StarDuelApp {
                 ? `${active.actionsLeft} action${active.actionsLeft === 1 ? "" : "s"} remaining on your bridge.`
                 : "Enemy bridge has initiative. Stand by for their maneuver."
               : `${active.actionsLeft} action${active.actionsLeft === 1 ? "" : "s"} remaining. Pass the keyboard when the turn ends.`;
+
+    if (isOnlineSingleSeatView) {
+      if (connectedCount < 2) {
+        label = "Link Status";
+        playerText = "Waiting For Opponent";
+        detail = "Controls stay locked until the second player joins the room.";
+      } else if (this.state.gameOver) {
+        label = "Battle Complete";
+        playerText = this.state.winnerIndex === null
+          ? "Draw"
+          : this.state.winnerIndex === perspectivePlayerIndex
+            ? "Victory"
+            : "Defeat";
+        detail = this.state.status;
+      } else if (this.state.phase === "animation") {
+        label = "Weapons Resolving";
+        playerText = "Controls Locked";
+        detail = "Torpedo in flight. Wait for the shot to resolve before issuing another command.";
+      } else if (onlineControlsLocked) {
+        label = "Opponent Turn";
+        playerText = "Controls Locked";
+        detail = this.state.phase === "move"
+          ? "Your opponent is maneuvering. Input is locked until their move finishes."
+          : "Your opponent is taking their turn. Input is locked until control returns to you.";
+      } else if (this.state.phase === "move") {
+        label = "Your Turn";
+        playerText = "Move Action Live";
+        detail = `${this.state.moveContext.stepsRemaining} thrust${this.state.moveContext.stepsRemaining === 1 ? "" : "s"} remain in this move action.`;
+      } else {
+        label = "Your Turn";
+        playerText = `${active.actionsLeft} Action${active.actionsLeft === 1 ? "" : "s"} Ready`;
+        detail = "Command input is live. Plot movement, raise or lower shields, or fire if your shields are down.";
+      }
+    }
 
     this.ui.turnBanner.classList.remove("turn-banner--player-0", "turn-banner--player-1");
     this.ui.turnBanner.classList.add(`turn-banner--player-${bannerPlayerIndex}`);
@@ -1132,10 +1201,28 @@ export class StarDuelApp {
 
   hexCenter(col, row, metrics) {
     const projected = this.projectCoordinate(col, row);
-
-    return {
+    const point = {
       x: metrics.offsetX + Math.sqrt(3) * metrics.radius * (projected.col + 0.5 * (projected.row & 1)),
       y: metrics.offsetY + metrics.radius * 1.5 * projected.row,
+    };
+
+    return this.rotateBoardPoint(point, metrics);
+  }
+
+  rotateBoardPoint(point, metrics) {
+    const rotation = this.isOnlineSingleSeatView() ? Math.PI / 2 : 0;
+    if (rotation === 0) {
+      return point;
+    }
+
+    const centerX = metrics.width / 2;
+    const centerY = metrics.height / 2;
+    const dx = point.x - centerX;
+    const dy = point.y - centerY;
+
+    return {
+      x: centerX + dx * Math.cos(rotation) - dy * Math.sin(rotation),
+      y: centerY + dx * Math.sin(rotation) + dy * Math.cos(rotation),
     };
   }
 

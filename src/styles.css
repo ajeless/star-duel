@@ -401,17 +401,40 @@ h1 {
   align-items: start;
 }
 
-.app-shell--online-seat-0 .battle-layout {
+.app-shell--online-mode .turn-banner {
+  padding: 18px 22px;
+  gap: 10px;
+}
+
+.app-shell--online-mode .turn-banner__player {
+  font-size: clamp(1.05rem, 1.8vw, 1.45rem);
+}
+
+.app-shell--online-mode .turn-banner__detail {
+  color: var(--muted);
+}
+
+.app-shell--online-mode .battle-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.app-shell--online-seat-0:not(.app-shell--online-mode) .battle-layout {
   grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
 }
 
-.app-shell--online-seat-1 .battle-layout {
+.app-shell--online-seat-1:not(.app-shell--online-mode) .battle-layout {
   grid-template-columns: minmax(0, 1fr) minmax(220px, 250px);
 }
 
 .app-shell--online-seat-0 #hud-player-2,
 .app-shell--online-seat-1 #hud-player-1 {
   display: none;
+}
+
+.app-shell--online-seat-0 #hud-player-1,
+.app-shell--online-seat-1 #hud-player-2 {
+  order: -1;
 }
 
 .hud {
@@ -468,6 +491,38 @@ h1 {
   font-size: 1rem;
 }
 
+.app-shell--online-mode .hud {
+  padding: 18px 20px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.app-shell--online-mode .hud__title {
+  grid-column: 1 / span 2;
+  font-size: 1.08rem;
+}
+
+.app-shell--online-mode .hud__callsign {
+  grid-column: 3 / -1;
+  margin-bottom: 0;
+  justify-self: end;
+  text-align: right;
+}
+
+.app-shell--online-mode .hud__stat {
+  min-width: 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(116, 183, 240, 0.16);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.app-shell--online-mode .hud__stat strong {
+  font-size: 1.08rem;
+}
+
 .arena-panel {
   min-width: 0;
 }
@@ -489,6 +544,11 @@ h1 {
   min-height: 420px;
   border-radius: 16px;
   overflow: hidden;
+}
+
+.app-shell--online-mode #game-root {
+  height: clamp(560px, 72vh, 920px);
+  min-height: 560px;
 }
 
 #game-root canvas {
@@ -631,6 +691,17 @@ h2 {
   .arena-frame {
     order: -1;
   }
+
+  .app-shell--online-mode .hud {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-shell--online-mode .hud__title,
+  .app-shell--online-mode .hud__callsign {
+    grid-column: 1 / -1;
+    justify-self: start;
+    text-align: left;
+  }
 }
 
 @media (max-width: 720px) {
@@ -650,6 +721,15 @@ h2 {
   #game-root {
     height: clamp(360px, 52vh, 520px);
     min-height: 360px;
+  }
+
+  .app-shell--online-mode .hud {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell--online-mode #game-root {
+    height: clamp(480px, 64vh, 720px);
+    min-height: 480px;
   }
 
   .arena-overlay {
