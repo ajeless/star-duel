@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Star Duel</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="data:," />
+    <script type="module" src="/src/main.js"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -13,7 +14,7 @@
           <p class="eyebrow">Retro Tactical Sandbox</p>
           <h1>Star Duel</h1>
           <p class="subtitle">
-            Hot-seat, turn-based ship combat inspired by Sega&apos;s Star Trek SOS.
+            Phaser-powered hot-seat ship combat on a hex battlefield.
           </p>
         </div>
         <section class="console-block controls-panel" aria-label="Control reference">
@@ -45,49 +46,20 @@
         <aside class="hud hud-left" id="hud-player-1">
           <div class="hud__title">Player 1</div>
           <div class="hud__callsign">USS Vector</div>
-          <div class="hud__stat">
-            <span>Hull</span>
-            <strong id="player-1-hull">100</strong>
-          </div>
-          <div class="meter">
-            <div class="meter__fill meter__fill--hull" id="player-1-hull-meter"></div>
-          </div>
-          <div class="hud__stat">
-            <span>Shield Pool</span>
-            <strong id="player-1-shield">100</strong>
-          </div>
-          <div class="meter">
-            <div class="meter__fill meter__fill--shield" id="player-1-shield-meter"></div>
-          </div>
-          <div class="hud__stat">
-            <span>Shield State</span>
-            <strong id="player-1-shield-state">DOWN</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Torpedoes</span>
-            <strong id="player-1-torpedoes">10</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Actions Ready</span>
-            <strong id="player-1-actions">2</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Range To Target</span>
-            <strong id="player-1-range">0</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Hit Chance</span>
-            <strong id="player-1-hit-chance">0%</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Coordinates</span>
-            <strong id="player-1-position">00 / 00</strong>
-          </div>
+          <div class="hud__stat"><span>Hull</span><strong id="player-1-hull">100</strong></div>
+          <div class="hud__stat"><span>Shield Pool</span><strong id="player-1-shield">100</strong></div>
+          <div class="hud__stat"><span>Shield State</span><strong id="player-1-shield-state">DOWN</strong></div>
+          <div class="hud__stat"><span>Torpedoes</span><strong id="player-1-torpedoes">10</strong></div>
+          <div class="hud__stat"><span>Boost Shots</span><strong id="player-1-boost">0</strong></div>
+          <div class="hud__stat"><span>Actions Ready</span><strong id="player-1-actions">2</strong></div>
+          <div class="hud__stat"><span>Range To Target</span><strong id="player-1-range">0</strong></div>
+          <div class="hud__stat"><span>Hit Chance</span><strong id="player-1-hit-chance">0%</strong></div>
+          <div class="hud__stat"><span>Coordinates</span><strong id="player-1-position">00 / 00</strong></div>
         </aside>
 
         <section class="arena-panel">
           <div class="arena-frame">
-            <canvas id="battlefield" aria-label="Star Duel battlefield"></canvas>
+            <div id="game-root" aria-label="Star Duel battlefield"></div>
             <div class="arena-overlay">
               <span class="arena-overlay__label">Command Uplink</span>
               <strong id="mode-label">Awaiting Orders</strong>
@@ -99,44 +71,15 @@
         <aside class="hud hud-right" id="hud-player-2">
           <div class="hud__title">Player 2</div>
           <div class="hud__callsign">IKS Specter</div>
-          <div class="hud__stat">
-            <span>Hull</span>
-            <strong id="player-2-hull">100</strong>
-          </div>
-          <div class="meter">
-            <div class="meter__fill meter__fill--hull" id="player-2-hull-meter"></div>
-          </div>
-          <div class="hud__stat">
-            <span>Shield Pool</span>
-            <strong id="player-2-shield">100</strong>
-          </div>
-          <div class="meter">
-            <div class="meter__fill meter__fill--shield" id="player-2-shield-meter"></div>
-          </div>
-          <div class="hud__stat">
-            <span>Shield State</span>
-            <strong id="player-2-shield-state">DOWN</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Torpedoes</span>
-            <strong id="player-2-torpedoes">10</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Actions Ready</span>
-            <strong id="player-2-actions">0</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Range To Target</span>
-            <strong id="player-2-range">0</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Hit Chance</span>
-            <strong id="player-2-hit-chance">0%</strong>
-          </div>
-          <div class="hud__stat">
-            <span>Coordinates</span>
-            <strong id="player-2-position">00 / 00</strong>
-          </div>
+          <div class="hud__stat"><span>Hull</span><strong id="player-2-hull">100</strong></div>
+          <div class="hud__stat"><span>Shield Pool</span><strong id="player-2-shield">100</strong></div>
+          <div class="hud__stat"><span>Shield State</span><strong id="player-2-shield-state">DOWN</strong></div>
+          <div class="hud__stat"><span>Torpedoes</span><strong id="player-2-torpedoes">10</strong></div>
+          <div class="hud__stat"><span>Boost Shots</span><strong id="player-2-boost">0</strong></div>
+          <div class="hud__stat"><span>Actions Ready</span><strong id="player-2-actions">0</strong></div>
+          <div class="hud__stat"><span>Range To Target</span><strong id="player-2-range">0</strong></div>
+          <div class="hud__stat"><span>Hit Chance</span><strong id="player-2-hit-chance">0%</strong></div>
+          <div class="hud__stat"><span>Coordinates</span><strong id="player-2-position">00 / 00</strong></div>
         </aside>
       </main>
 
@@ -150,7 +93,5 @@
         </div>
       </section>
     </div>
-
-    <script src="game.js"></script>
   </body>
 </html>
