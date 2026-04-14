@@ -14,6 +14,27 @@ python3 -m http.server
 
 Then open `http://localhost:8000`.
 
+## Branch Workflow
+
+- `main` is the active default branch.
+- `baseline` preserves the current browser prototype before any larger engine or platform split.
+- Right now, `main` and `baseline` are intended to stay identical, so collaborators can use either one.
+- If desktop-specific work starts to diverge, it should happen on a separate branch such as `desktop`, while `baseline` remains the reference snapshot.
+
+Example:
+
+```bash
+git clone <repo-url>
+cd star-duel
+git switch baseline
+```
+
+If you want the default line of development instead:
+
+```bash
+git switch main
+```
+
 ## Current MVP Rules
 
 - 33 x 33 hex battlefield
